@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      height: 100vh;
+      margin: 0;
+      padding: 1em;
+      align-items: center;
+    }
+
+    .checkbox {
+      padding-right: 1em;
+      white-space: nowrap;
+    }
+
+    #svg {
+      display: block;
+    }
+
+    svg text {
+      user-select: none;
+      pointer-events: none;
+    }
+    svg circle {
+      pointer-events: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <span class="checkbox">
+      <input type="checkbox" id="h1" name="h1" checked onChange="kidsClock.render()" />
+      <label for="h1">option 1</label>
+    </span>
+    <span class="checkbox">
+      <input type="checkbox" id="m1" name="m1" checked onChange="kidsClock.render()" />
+      <label for="m1">option 2</label>
+    </span>
+    <span class="checkbox">
+      <input type="checkbox" id="h2" name="h2" checked onChange="kidsClock.render()" />
+      <label for="h2">option 3</label>
+    </span>
+    <span class="checkbox">
+      <input type="checkbox" id="m2" name="m2" checked onChange="kidsClock.render()" />
+      <label for="m2">option 4</label>
+    </span>
+    <span class="checkbox">
+      <input type="checkbox" id="r" name="r" checked onChange="kidsClock.render()" />
+      <label for="r">option 5</label>
+    </span>
+    <span class="checkbox">
+      <button onclick="kidsClock.rand(); kidsClock.render();">rand</button>
+    </span>
+  </div>
+  <svg id="svg" viewBox="-100 -100 200 200" stroke="#000" fill="none" xmlns="http://www.w3.org/2000/svg"></svg>
+  <small>A page to help kids learn how to read analog clocks. 🇨🇭 Swiss made.</small>
+  <script src="svgjs/svg.min.js"></script>
+  <script>
+    class KidsClock {
+      constructor() {
+        this.timeHour = 0;
+        this.timeMin = 0;
+        this.timeMin2 = 0;
+
+        this.hands = [];
+        this.minDrag = false;
+
+        this.hourDrag = false;
+        this.prevMousePosition = [];
+        this.rand();
+        this.render();
+      }     
+      
+      rand() {
+        this.timeHour = (Math.random() * 12) | 0;
+        this.timeMin = ((Math.random() * 12) | 0) * 5;
+        this.timeMin2 = (Math.random() * 5) | 0;
+      }
+
+      getHour() {
+        return this.timeHour;
+      }
+      
+      static hourText(h) {
+        return h == 0 ? 12 : h;
+      }
+
+      getMin() {
+        if (r.checked) {
+          return this.timeMin;
+        } else {
+          return this.timeMin + this.timeMin2;
+        }
+      }
+
+      static minText(m) {
+        return ("0" + m).substr(-2);
+      }
+
+      render() {
+        this.draw = SVG().addTo("#svg").parent();
+        this.draw.clear();
+        this.draw.circle(180).center(0, 0);
+
+        // draw dots and lines around circle
+        for (let i = 0; i < 60; i++) {
+          if (i % 5 == 0) {
+            this.draw.line(60, 0, 66, 0).rotate(i * 6, 0, 0).stroke({ width: 2 });
+          } else {
+            this.draw.circle(2).center(63, 0).fill('#000').rotate(i * 6, 0, 0);
+          }
+        }
+
+        // draw hour text
+        if (h1.checked) {
+          for (let i = 0; i < 12; i++) {
+            let t = i;
+            if (i == 0) {
+              t = 12;
+            }
+            this.draw.text(t)
+              .center(0, 0)
+              .rotate(i * 30, 0, 50)
+              .translate(0, -50)
+              .rotate(-i * 30, 0, 0)
+              .fill('#00a').stroke('none');
+          }
+        }
+
+        // draw minute text
+        if (m1.checked) {
+          for (let i = 0; i < 60; i += 5) {
+            const t = this.draw.text(i)
+              .font({ size: 8 })
+              .center(0, 0)
+              .rotate(i * 6, 0, 76)
+              .translate(0, -76)
+              .fill('#0a0').stroke('none');
+            if ((i >= 20) && (i <= 40)) {
+              t.rotate(180);
+            }
+          }
+        }
+
+        this.draw.on('mousemove', e => this.minMouseMove(e));
+        this.draw.on('mouseup', e => this.minMouseUp(e));
+        this.draw.on('mousemove', e => this.hourMouseMove(e));
+        this.draw.on('mouseup', e => this.hourMouseUp(e));
+        this.drawHands(this.getHour(), this.getMin());
+
+        // draw pin which holds the needles in place
+        this.draw.circle(5).center(0, 0).fill('#333').stroke('none');
+      }
+
+      hand(width, length, tail) {
+        var polygon = this.draw.polygon().stroke('none');
+        polygon.plot([[-tail, -width / 2], [length * 5 / 6, -width], [length, 0], [length * 5 / 6, width], [-tail, width / 2]])
+        return polygon;
+      }
+
+      drawHands(hour, min) {
+        for (let i=0; i<this.hands.length; i++) {
+          this.hands[i].remove();
+        }
+        this.hands = [];
+
+        const hourAngle = hour * 30 + min / 2;
+        const minAngle = min * 6;
+
+        const minHand = this.hand(3, 60, 6).fill('#0a0').rotate(-90 + minAngle, 0, 0);
+        this.hands.push(minHand);
+        minHand.on('mousedown', e => this.minMouseDown(e));
+        if (m2.checked) {
+          this.hands.push(this.draw.circle(5)
+            .center(50, 0)
+            .rotate(-90 + minAngle, 0, 0)
+            .stroke('none')
+            .fill('#fff'));
+          this.hands.push(this.draw.text(KidsClock.minText(min))
+            .font({ size: 4 })
+            .center(50, 0)
+            .rotate(-90 + minAngle, 0, 0)
+            .rotate(90 - minAngle)
+            .stroke('none')
+            .fill('#0a0'));
+        }
+
+        const hourHand = this.hand(6, 45, 6).rotate(-90 + hourAngle, 0, 0).fill('#00a');
+        this.hands.push(hourHand);
+        hourHand.on('mousedown', e => this.hourMouseDown(e));
+        if (h2.checked) {
+          this.hands.push(this.draw.circle(9)
+            .center(36, 0)
+            .rotate(-90 + hourAngle, 0, 0)
+            .stroke('none')
+            .fill('#fff'));
+          this.hands.push(this.draw.text(KidsClock.hourText(hour))
+            .font({ size: 6 })
+            .center(36, 0)
+            .rotate(-90 + hourAngle, 0, 0)
+            .rotate(90 - hourAngle)
+            .stroke('none')
+            .fill('#00a'));
+        }
+      }
+
+      minMouseDown(e) {
+        if (this.minDrag || this.hourDrag) {
+          // TODO: cancel previous drag state
+          return;
+        }
+        this.minDrag = true;
+        const pt = DOMPoint.fromPoint(this.draw);
+        pt.x = e.x;
+        pt.y = e.y;
+        const pos = pt.matrixTransform(svg.getScreenCTM().inverse())
+        this.prevMousePosition = pos;
+        console.log("mouse down");
+      }
+
+      minMouseMove(e) {
+        if (!this.minDrag) {
+          // ignore mouse move if the initial mousedown event didn't start on the min hand
+          return;
+        }
+        const pt = DOMPoint.fromPoint(this.draw);
+        pt.x = e.x;
+        pt.y = e.y;
+        const pos = pt.matrixTransform(svg.getScreenCTM().inverse())
+
+        // calculate angular difference
+        const angle1 = Math.atan2(this.prevMousePosition.y, this.prevMousePosition.x);
+        const angle2 = Math.atan2(pos.y, pos.x);
+        let d = angle2 - angle1;
+
+        // we want a value between -π and π, so we know if we are adding or
+        // removing time.
+        d = d % (2 * Math.PI);
+        if (d > Math.PI) {
+          d -= 2 * Math.PI; 
+        }
+        if (d < -Math.PI) {
+          d += 2 * Math.PI;
+        }
+
+        // convert angular difference to minutes
+        const deltaMin = d / Math.PI * 30;
+
+        // calculate new time and redraw hands
+        let newHour = this.getHour();
+        let newMin = this.getMin() + deltaMin;
+        if (newMin < 0) {
+          console.log("HERE 1: ", this.getMin(), deltaMin, newMin);
+          newHour -= 1;
+          if (newHour < 0) {
+            console.log("HERE 3");
+            newHour += 12;
+          }
+          newMin += 60;
+        }
+        if (newMin >= 60) {
+          console.log("HERE 2");
+          newHour += 1;
+          if (newHour >= 12) {
+            console.log("HERE 4");
+            newHour -= 12;
+          }
+          newMin -= 60;
+        }
+        if (newMin != this.timeMin) {
+          this.timeMin = newMin;
+          this.timeHour = newHour;
+          this.prevMousePosition = pos;
+        }
+        this.drawHands(newHour, newMin|0);
+
+        console.log("mouse move");
+      }
+      
+      minMouseUp(e) {
+        if (!this.minDrag) {
+          // ignore mouse up if the initial mousedown event didn't start on the min hand
+          return;
+        }
+        this.minDrag = false;
+        this.prevMousePosition = undefined;
+        console.log("mouse up");
+      }
+      
+      hourMouseDown(e) {
+        if (this.minDrag || this.hourDrag) {
+          // TODO: cancel previous drag state
+          return;
+        }
+        this.hourDrag = true;
+        const pt = DOMPoint.fromPoint(this.draw);
+        pt.x = e.x;
+        pt.y = e.y;
+        const pos = pt.matrixTransform(svg.getScreenCTM().inverse())
+        this.prevMousePosition = pos;
+        console.log("hour mouse down");
+      }
+
+      hourMouseMove(e) {
+        if (!this.hourDrag) {
+          // ignore mouse move if the initial mousedown event didn't start on the hour hand
+          return;
+        }
+        const pt = DOMPoint.fromPoint(this.draw);
+        pt.x = e.x;
+        pt.y = e.y;
+        const pos = pt.matrixTransform(svg.getScreenCTM().inverse())
+
+        // calculate angular difference
+        const angle1 = Math.atan2(this.prevMousePosition.y, this.prevMousePosition.x);
+        const angle2 = Math.atan2(pos.y, pos.x);
+        let d = angle2 - angle1;
+
+        // we want a value between -π and π, so we know if we are adding or
+        // removing time.
+        d = d % (2 * Math.PI);
+        if (d > Math.PI) {
+          d -= 2 * Math.PI; 
+        }
+        if (d < -Math.PI) {
+          d += 2 * Math.PI;
+        }
+
+        // convert angular difference to hours + minutes
+        let deltaHour = d / Math.PI * 6;
+        let frac = deltaHour - (deltaHour | 0);
+        deltaHour = deltaHour | 0;
+        const deltaMin = frac * 60;
+
+        // calculate new time and redraw hands
+        let newHour = this.getHour() + deltaHour;
+        let newMin = this.getMin() + deltaMin;
+        if (newMin < 0) {
+          newHour -= 1;
+          newMin += 60;
+        }
+        if (newMin >= 60) {
+          newHour += 1;
+          newMin -= 60;
+        }
+        if (newHour < 0) {
+          newHour += 12;
+        }
+        if (newHour >= 12) {
+          newHour -= 12;
+        }
+        if (newMin != this.timeMin) {
+          this.timeMin = newMin;
+          this.timeHour = newHour;
+          this.prevMousePosition = pos;
+        }
+        this.drawHands(newHour, newMin|0);
+        console.log("mouse move");
+      }
+      
+      hourMouseUp(e) {
+        if (!this.hourDrag) {
+          // ignore mouse up if the initial mousedown event didn't start on the hour hand
+          return;
+        }
+        this.hourDrag = false;
+        this.prevMousePosition = undefined;
+        console.log("mouse up");
+      }        
+    }
+
+    kidsClock = new KidsClock();
+  </script>
+</body>
+
+</html>
