@@ -36,6 +36,22 @@
 </head>
 
 <body>
+  <!--
+Levels:
+- level 1: minutes + hours on clock face, hours + minutes highlight, minutes are
+           0, 15, 30, or 45, color coded.
+- level 2: minutes + hours on clock face, hours + minutes highlight, minutes are
+           0, 5, 10, 15, ..., color coded.
+- level 3: minutes + hours on clock face, any minute, color coded.
+- level 4: hours only on clock face, any minute, color coded.
+- level 5: roman numerals, any minute, color coded.
+- level 6: only 12, 3, 6, 9 + dots on hour face, any minute, plain colors
+- level 7: only 12 + dots on hour face, any minute, plain colors
+- level 8: only 12 + 3 dots on hour face, minutes are 0, 15, 30, or 45, plain colors
+- level 9: only 12 + 3 dots on hour face, any minute, plain colors
+- level 10: only 12, any minute, plain colors
+
+  -->
   <div>
     <span class="checkbox">
       <input type="checkbox" id="h1" name="h1" checked onChange="kidsClock.render()" />
@@ -58,7 +74,7 @@
       <label for="r">option 5</label>
     </span>
     <span class="checkbox">
-      <button onclick="kidsClock.rand(); kidsClock.render();">rand</button>
+      <button onclick="kidsClock.rand();">rand</button>
     </span>
   </div>
   <svg id="svg" viewBox="-100 -100 200 200" stroke="#000" fill="none" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -76,14 +92,15 @@
 
         this.hourDrag = false;
         this.prevMousePosition = [];
-        this.rand();
         this.render();
+        this.rand();
       }     
       
       rand() {
         this.timeHour = (Math.random() * 12) | 0;
         this.timeMin = ((Math.random() * 12) | 0) * 5;
         this.timeMin2 = (Math.random() * 5) | 0;
+        this.drawHands(this.getHour(), this.getMin());
       }
 
       getHour() {
@@ -107,46 +124,20 @@
       }
 
       render() {
-        this.draw = SVG().addTo("#svg").parent();
-        this.draw.clear();
+        this.draw = SVG(svg);
         this.draw.circle(180).center(0, 0);
-
-        // draw dots and lines around circle
-        for (let i = 0; i < 60; i++) {
-          if (i % 5 == 0) {
-            this.draw.line(60, 0, 66, 0).rotate(i * 6, 0, 0).stroke({ width: 2 });
-          } else {
-            this.draw.circle(2).center(63, 0).fill('#000').rotate(i * 6, 0, 0);
-          }
-        }
-
-        // draw hour text
-        if (h1.checked) {
-          for (let i = 0; i < 12; i++) {
-            let t = i;
-            if (i == 0) {
-              t = 12;
-            }
-            this.draw.text(t)
-              .center(0, 0)
-              .rotate(i * 30, 0, 50)
-              .translate(0, -50)
-              .rotate(-i * 30, 0, 0)
-              .fill('#00a').stroke('none');
-          }
-        }
 
         // draw minute text
         if (m1.checked) {
           for (let i = 0; i < 60; i += 5) {
-            const t = this.draw.text(i)
+            const text = this.draw.text(i)
               .font({ size: 8 })
               .center(0, 0)
               .rotate(i * 6, 0, 76)
               .translate(0, -76)
               .fill('#0a0').stroke('none');
             if ((i >= 20) && (i <= 40)) {
-              t.rotate(180);
+              text.rotate(180);
             }
           }
         }
@@ -173,44 +164,70 @@
         }
         this.hands = [];
 
+        if (h1.checked) {
+          for (let i = 0; i < 12; i++) {
+            let t = i;
+            if (i == 0) {
+              t = 12;
+            }
+            const text = this.draw.text(t)
+              .center(0, 0)
+              .rotate(i * 30, 0, 50)
+              .translate(0, -50)
+              .rotate(-i * 30, 0, 0)
+              .stroke('none');
+            if (h2.checked) {
+              if (i == this.getHour()) {
+                text.fill('#00a');
+              } else {
+                text.fill('#aaf');
+              }
+            } else {
+              text.fill('#00a');
+            }
+            this.hands.push(text);
+          }
+        }
+
+        // draw dots and lines around circle
+        for (let i = 0; i < 60; i++) {
+          let el
+          if (i % 5 == 0) {
+            el = this.draw.line(60, 0, 66, 0).rotate(-90 + i * 6, 0, 0).stroke({ width: 2 });
+            if (m2.checked) {
+              if (i == min) {
+                el.stroke({width: 2, color: '#0a0'});
+              } else {
+                el.stroke({width: 2});
+              }
+            } else {
+              el.stroke({width: 2});
+            }
+          } else {
+            el = this.draw.circle(2).center(63, 0).rotate(-90 + i * 6, 0, 0);
+            if (m2.checked) {
+              if (i == min) {
+                el.fill('#0a0').stroke('#0a0');
+              } else {
+                el.fill('#000');
+              }
+            } else {
+              el.fill('#000');
+            }
+          }
+          this.hands.push(el);
+        }
+
         const hourAngle = hour * 30 + min / 2;
         const minAngle = min * 6;
 
         const minHand = this.hand(3, 60, 6).fill('#0a0').rotate(-90 + minAngle, 0, 0);
         this.hands.push(minHand);
         minHand.on('mousedown', e => this.minMouseDown(e));
-        if (m2.checked) {
-          this.hands.push(this.draw.circle(5)
-            .center(50, 0)
-            .rotate(-90 + minAngle, 0, 0)
-            .stroke('none')
-            .fill('#fff'));
-          this.hands.push(this.draw.text(KidsClock.minText(min))
-            .font({ size: 4 })
-            .center(50, 0)
-            .rotate(-90 + minAngle, 0, 0)
-            .rotate(90 - minAngle)
-            .stroke('none')
-            .fill('#0a0'));
-        }
 
         const hourHand = this.hand(6, 45, 6).rotate(-90 + hourAngle, 0, 0).fill('#00a');
         this.hands.push(hourHand);
         hourHand.on('mousedown', e => this.hourMouseDown(e));
-        if (h2.checked) {
-          this.hands.push(this.draw.circle(9)
-            .center(36, 0)
-            .rotate(-90 + hourAngle, 0, 0)
-            .stroke('none')
-            .fill('#fff'));
-          this.hands.push(this.draw.text(KidsClock.hourText(hour))
-            .font({ size: 6 })
-            .center(36, 0)
-            .rotate(-90 + hourAngle, 0, 0)
-            .rotate(90 - hourAngle)
-            .stroke('none')
-            .fill('#00a'));
-        }
       }
 
       minMouseDown(e) {
