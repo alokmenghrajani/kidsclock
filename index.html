@@ -259,25 +259,22 @@
         let newHour = this.getHour();
         let newMin = this.getMin() + deltaMin;
         if (newMin < 0) {
-          console.log("HERE 1: ", this.getMin(), deltaMin, newMin);
           newHour -= 1;
           if (newHour < 0) {
-            console.log("HERE 3");
             newHour += 12;
           }
           newMin += 60;
         }
         if (newMin >= 60) {
-          console.log("HERE 2");
           newHour += 1;
           if (newHour >= 12) {
-            console.log("HERE 4");
             newHour -= 12;
           }
           newMin -= 60;
         }
         if (newMin != this.timeMin) {
           this.timeMin = newMin;
+          this.timeMin2 = 0;
           this.timeHour = newHour;
           this.prevMousePosition = pos;
         }
