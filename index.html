@@ -129,7 +129,6 @@
   <script src="svgjs/svg.min.js"></script>
   <script>
     // TODO:
-    // - click/touch on hands
     // - consider making angularTime number of seconds since noon/midnight.
     // - rewrite validate input. Use angularTime?
     // - improve UI (default mobile keyboard to numeric, disallow typing non-numeric keys, keep focus on input box,
@@ -144,9 +143,10 @@
         this.level = 0;
         this.maxLevel = 0;
         this.score = Array(LEVELS).fill(0)
+        this.drag = false;
 
         // We track time in "angularTime", which is essentially the number of degrees the
-        // hour hand has moved since 12:00. There's 4320 angularTime degrees per half-day.
+        // minute hand has moved since 12:00. There's 4320 angularTime degrees per half-day.
         // AngularTime makes handling clicks and touch events easier.
         this.angularTime = 0;
 
@@ -156,8 +156,10 @@
         // Draw the elements which don't change when the time changes or between levels
         this.draw = SVG(svg);
         this.draw.circle(180).center(0, 0);
-        this.draw.on('mousemove', e => this.mouseMove(e));
-        this.draw.on('mouseup', e => this.mouseUp(e));
+        this.draw.on('mousemove', e => this.eventMove(e));
+        this.draw.on('touchmove', e => this.eventMove(e));
+        this.draw.on('mouseup', e => this.eventUp(e));
+        this.draw.on('touchup', e => this.eventUp(e));
       }
 
       setAngularTime(t) {
@@ -629,7 +631,8 @@
         } else {
           minHand.fill('#aaa');
         }
-        minHand.on('mousedown', e => this.minMouseDown(e));
+        minHand.on('mousedown', e => this.eventDown(e, "min"));
+        minHand.on('touchdown', e => this.eventDown(e, "min"));
         this.elements.push(minHand);
 
         // draw hour hand
@@ -639,7 +642,8 @@
         } else {
           hourHand.fill('#666');
         }
-        hourHand.on('mousedown', e => this.hourMouseDown(e));
+        hourHand.on('mousedown', e => this.eventDown(e, "hour"));
+        hourHand.on('touchdown', e => this.eventDown(e, "hour"));
         this.elements.push(hourHand);
 
         // draw pin which holds the hands in place
@@ -652,176 +656,69 @@
         return polygon;
       }
 
-      mouseMove(e) {
-        // TODO: implement
+      eventMove(e) {
+        if (!this.drag) {
+          return;
+        }
+        const pt = DOMPoint.fromPoint(this.draw);
+        pt.x = e.x;
+        pt.y = e.y;
+        const pos = pt.matrixTransform(svg.getScreenCTM().inverse())
+
+        // calculate angular difference in radians
+        const angle1 = Math.atan2(this.prevEventPosition.y, this.prevEventPosition.x);
+        const angle2 = Math.atan2(pos.y, pos.x);
+        let d = angle2 - angle1;
+
+        // we want a value between -π and π, so we know if we are adding or
+        // removing time.
+        d = d % (2 * Math.PI);
+        if (d > Math.PI) {
+          d -= 2 * Math.PI;
+        }
+        if (d < -Math.PI) {
+          d += 2 * Math.PI;
+        }
+
+        // convert radians into angularTime
+        let delta = d * 180 / Math.PI;
+        if (this.drag == "hour") {
+          delta *= 12;
+        }
+        this.tempAngularTime = this.tempAngularTime + delta;
+
+        this.tempAngularTime = this.tempAngularTime % (12 * 360);
+        if (this.tempAngularTime < 0) {
+          // If tempAngularTime was negative, modulo remains negative.
+          this.tempAngularTime += 12 * 360;
+        }
+
+        // TODO: only bother rendering if there's a significant difference.
+        // we'll need to track the angularTime when the last render happened.
+        this.prevEventPosition = pos;
+        this.update(this.tempAngularTime);
       }
 
-      mouseUp(e) {
-        // TODO: implement
+      // When we get a mouseUp or touchUp event, we revert to how things were before the
+      // move event happened.
+      eventUp(e) {
+        this.drag = false;
+        this.update(this.angularTime);
+      }
+
+      // When we get a mouseDown or touchDown event, we record the current position of
+      // the clock & event.
+      eventDown(e, hand) {
+        this.drag = hand;
+        this.tempAngularTime = this.angularTime;
+        // record current event position so we can compute deltas when the mouse or touch moves.
+        // We need everything in the svg's frame of reference.
+        const pt = DOMPoint.fromPoint(this.draw);
+        pt.x = e.x;
+        pt.y = e.y;
+        this.prevEventPosition = pt.matrixTransform(svg.getScreenCTM().inverse());
       }
     }
-
-    //   minMouseDown(e) {
-    //     if (this.minDrag || this.hourDrag) {
-    //       // TODO: cancel previous drag state
-    //       return;
-    //     }
-    //     this.minDrag = true;
-    //     const pt = DOMPoint.fromPoint(this.draw);
-    //     pt.x = e.x;
-    //     pt.y = e.y;
-    //     const pos = pt.matrixTransform(svg.getScreenCTM().inverse())
-    //     this.prevMousePosition = pos;
-    //     console.log("mouse down");
-    //   }
-
-    //   minMouseMove(e) {
-    //     if (!this.minDrag) {
-    //       // ignore mouse move if the initial mousedown event didn't start on the min hand
-    //       return;
-    //     }
-    //     const pt = DOMPoint.fromPoint(this.draw);
-    //     pt.x = e.x;
-    //     pt.y = e.y;
-    //     const pos = pt.matrixTransform(svg.getScreenCTM().inverse())
-
-    //     // calculate angular difference
-    //     const angle1 = Math.atan2(this.prevMousePosition.y, this.prevMousePosition.x);
-    //     const angle2 = Math.atan2(pos.y, pos.x);
-    //     let d = angle2 - angle1;
-
-    //     // we want a value between -π and π, so we know if we are adding or
-    //     // removing time.
-    //     d = d % (2 * Math.PI);
-    //     if (d > Math.PI) {
-    //       d -= 2 * Math.PI;
-    //     }
-    //     if (d < -Math.PI) {
-    //       d += 2 * Math.PI;
-    //     }
-
-    //     // convert angular difference to minutes
-    //     const deltaMin = d / Math.PI * 30;
-
-    //     // calculate new time and redraw hands
-    //     let newHour = this.getHour();
-    //     let newMin = this.getMin() + deltaMin;
-    //     if (newMin < 0) {
-    //       newHour -= 1;
-    //       if (newHour < 0) {
-    //         newHour += 12;
-    //       }
-    //       newMin += 60;
-    //     }
-    //     if (newMin >= 60) {
-    //       newHour += 1;
-    //       if (newHour >= 12) {
-    //         newHour -= 12;
-    //       }
-    //       newMin -= 60;
-    //     }
-    //     if (newMin != this.timeMin) {
-    //       this.timeMin = newMin;
-    //       this.timeMin2 = 0;
-    //       this.timeHour = newHour;
-    //       this.prevMousePosition = pos;
-    //     }
-    //     this.drawHands(newHour, newMin | 0);
-
-    //     console.log("mouse move");
-    //   }
-
-    //   minMouseUp(e) {
-    //     if (!this.minDrag) {
-    //       // ignore mouse up if the initial mousedown event didn't start on the min hand
-    //       return;
-    //     }
-    //     this.minDrag = false;
-    //     this.prevMousePosition = undefined;
-    //     console.log("mouse up");
-    //   }
-
-    //   hourMouseDown(e) {
-    //     if (this.minDrag || this.hourDrag) {
-    //       // TODO: cancel previous drag state
-    //       return;
-    //     }
-    //     this.hourDrag = true;
-    //     const pt = DOMPoint.fromPoint(this.draw);
-    //     pt.x = e.x;
-    //     pt.y = e.y;
-    //     const pos = pt.matrixTransform(svg.getScreenCTM().inverse())
-    //     this.prevMousePosition = pos;
-    //     console.log("hour mouse down");
-    //   }
-
-    //   hourMouseMove(e) {
-    //     if (!this.hourDrag) {
-    //       // ignore mouse move if the initial mousedown event didn't start on the hour hand
-    //       return;
-    //     }
-    //     const pt = DOMPoint.fromPoint(this.draw);
-    //     pt.x = e.x;
-    //     pt.y = e.y;
-    //     const pos = pt.matrixTransform(svg.getScreenCTM().inverse())
-
-    //     // calculate angular difference
-    //     const angle1 = Math.atan2(this.prevMousePosition.y, this.prevMousePosition.x);
-    //     const angle2 = Math.atan2(pos.y, pos.x);
-    //     let d = angle2 - angle1;
-
-    //     // we want a value between -π and π, so we know if we are adding or
-    //     // removing time.
-    //     d = d % (2 * Math.PI);
-    //     if (d > Math.PI) {
-    //       d -= 2 * Math.PI;
-    //     }
-    //     if (d < -Math.PI) {
-    //       d += 2 * Math.PI;
-    //     }
-
-    //     // convert angular difference to hours + minutes
-    //     let deltaHour = d / Math.PI * 6;
-    //     let frac = deltaHour - (deltaHour | 0);
-    //     deltaHour = deltaHour | 0;
-    //     const deltaMin = frac * 60;
-
-    //     // calculate new time and redraw hands
-    //     let newHour = this.getHour() + deltaHour;
-    //     let newMin = this.getMin() + deltaMin;
-    //     if (newMin < 0) {
-    //       newHour -= 1;
-    //       newMin += 60;
-    //     }
-    //     if (newMin >= 60) {
-    //       newHour += 1;
-    //       newMin -= 60;
-    //     }
-    //     if (newHour < 0) {
-    //       newHour += 12;
-    //     }
-    //     if (newHour >= 12) {
-    //       newHour -= 12;
-    //     }
-    //     if (newMin != this.timeMin) {
-    //       this.timeMin = newMin;
-    //       this.timeHour = newHour;
-    //       this.prevMousePosition = pos;
-    //     }
-    //     this.drawHands(newHour, newMin | 0);
-    //     console.log("mouse move");
-    //   }
-
-    //   hourMouseUp(e) {
-    //     if (!this.hourDrag) {
-    //       // ignore mouse up if the initial mousedown event didn't start on the hour hand
-    //       return;
-    //     }
-    //     this.hourDrag = false;
-    //     this.prevMousePosition = undefined;
-    //     console.log("mouse up");
-    //   }
-    // }
 
     kidsClock = new KidsClock();
 
