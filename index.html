@@ -106,7 +106,6 @@
     // - force user to type enter.
     // - figure out mobile UI
     // - confetti or something when you switch from one level to another
-    // - force user input to be 1-12 for hours and 0-59 for minutes.
 
     const LEVELS = 9;
 
@@ -355,11 +354,15 @@
         let delta1 = 9999;
         let m = input.value.match(/^([0-9]{1,2})[^0-9]([0-9]{1,2})$/);
         if (m) {
-          delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2] | 0)))
+          if ((m[1] >= 1) && (m[1] <= 12) && (m[2] >= 0) && (m[2] <= 59)) {
+            delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2] | 0)))
+          }
         } else {
           m = input.value.match(/^([0-9]{1,2})([0-9]{2,2})$/);
           if (m) {
-            delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2] | 0)))
+            if ((m[1] >= 1) && (m[1] <= 12) && (m[2] >= 0) && (m[2] <= 59)) {
+              delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2] | 0)))
+            }
           }
         }
         const delta2 = Math.abs(720 - delta1);
@@ -376,8 +379,6 @@
         }
 
         // TODO: animate error
-        // TODO: remove
-        console.log(hour, ":", min, "...", delta);
       }
 
       update(angularTime) {
