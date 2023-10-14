@@ -78,15 +78,15 @@
     <svg id="svg" viewBox="-100 -100 200 200" stroke="#000" fill="none" xmlns="http://www.w3.org/2000/svg"></svg>
     <div id="form">
       <p><select id="levelPicker" onChange="kidsClock.changeLevel()">
-          <option id="level--1" value="1">level 1</option>
-          <option id="level--2" value="2" disabled>level 2</option>
-          <option id="level--3" value="3" disabled>level 3</option>
-          <option id="level--4" value="4" disabled>level 4</option>
-          <option id="level--5" value="5" disabled>level 5</option>
-          <option id="level--6" value="6" disabled>level 6</option>
-          <option id="level--7" value="7" disabled>level 7</option>
-          <option id="level--8" value="8" disabled>level 8</option>
-          <option id="level--9" value="9" disabled>level 9</option>
+          <option id="level--0" value="0">level 1</option>
+          <option id="level--1" value="1" disabled>level 2</option>
+          <option id="level--2" value="2" disabled>level 3</option>
+          <option id="level--3" value="3" disabled>level 4</option>
+          <option id="level--4" value="4" disabled>level 5</option>
+          <option id="level--5" value="5" disabled>level 6</option>
+          <option id="level--6" value="6" disabled>level 7</option>
+          <option id="level--7" value="7" disabled>level 8</option>
+          <option id="level--8" value="8" disabled>level 9</option>
         </select></p>
       <div>
         <nobr>Time?</nobr>
@@ -98,10 +98,20 @@
   <small id="footer">A page to help kids learn how to read analog clocks. 🇨🇭 Swiss made.</small>
   <script src="svgjs/svg.min.js"></script>
   <script>
+// TODO:
+// - click/touch on hands
+// - consider making angularTime number of seconds since noon/midnight.
+// - rewrite validate input. Use angularTime?
+// - do something when the user gets the input wrong.
+// - force user to type enter.
+// - figure out mobile UI
+// - confetti or something when you switch from one level to another
+// - force user input to be 1-12 for hours and 0-59 for minutes.
+
     class KidsClock {
       constructor() {
-        this.level = 1;
-        this.score = Array(10).fill(0)
+        this.level = 0;
+        this.score = Array(9).fill(0)
 
         // We track time in "angularTime", which is essentially the number of degrees the
         // hour hand has moved since 12:00. There's 4320 angularTime degrees per half-day.
@@ -125,11 +135,14 @@
           this.angularTime += 12 * 360;
         }
         this.update(this.angularTime);
+        input.value = "";
       }
 
       incrementScore() {
         this.score[this.level]++;
-
+        if (this.score[this.level] > 5) {
+          this.score[this.level] = 5;
+        }
         if (this.score[this.level] == 5) {
           // TODO: show confetti
           if (this.level < 9) {
@@ -149,15 +162,15 @@
 
       reload() {
         levelPicker.value = this.level;
-        for (let i = 1; i <= this.level; i++) {
+        for (let i = 0; i <= this.level; i++) {
           document.getElementById("level--" + i).disabled = false;
         }
 
         const icons = ["⭐", "😛", "🍄", "🐚", "🌻", "🦋", "🧸", "🏆", "🐐"];
-        score.innerText = Array(this.score[this.level]).fill(icons[this.level-1]).join('');
+        score.innerText = Array(this.score[this.level]).fill(icons[this.level]).join('');
 
         switch (this.level) {
-          case 1:
+          case 0:
             {
               // hours and minutes on clock face.
               this.minutesText = true;
@@ -177,7 +190,7 @@
               this.setAngularTime(hour * 360 + min * 6);
               break;
             }
-          case 2:
+          case 1:
             {
               // hours and minutes on clock face.
               this.minutesText = true;
@@ -197,7 +210,7 @@
               this.setAngularTime(hour * 360 + min * 6);
               break;
             }
-          case 3:
+          case 2:
             {
               // hours and minutes on clock face.
               this.minutesText = true;
@@ -217,7 +230,7 @@
               this.setAngularTime(hour * 360 + min * 6);
               break;
             }
-          case 4:
+          case 3:
             {
               // no more minutes on the clock face.
               this.minutesText = false;
@@ -233,7 +246,7 @@
               this.setAngularTime(hour * 360 + min * 6);
               break;
             }
-          case 5:
+          case 4:
             {
               // roman numerals
               this.hoursText = "roman";
@@ -249,7 +262,7 @@
               this.setAngularTime(hour * 360 + min * 6);
               break;
             }
-          case 6:
+          case 5:
             {
               // only 12, 3, 6, 9 for hours
               this.hoursText = "arabic-2";
@@ -267,7 +280,7 @@
               this.setAngularTime(hour * 360 + min * 6);
               break;
             }
-          case 7:
+          case 6:
             {
               // only 12 for hours
               this.hoursText = "arabic-3";
@@ -283,7 +296,7 @@
               this.setAngularTime(hour * 360 + min * 6);
               break;
             }
-          case 8:
+          case 7:
             {
               // only 12 for hours and different style for minute dots
               this.hoursText = "arabic-3";
@@ -301,7 +314,7 @@
               this.setAngularTime(hour * 360 + min * 6);
               break;
             }
-          case 9:
+          case 8:
             {
               // only 12 for hours and different style for minute dots
               this.hoursText = "arabic-3";
@@ -344,13 +357,11 @@
         const delta = Math.min(delta1, delta2);
         if (delta == 0) {
           this.incrementScore();
-          input.value = "";
           return;
         }
 
         if ((this.level == 9) && (delta <= 5)) {
           this.incrementScore();
-          input.value = "";
           return;
         }
 
