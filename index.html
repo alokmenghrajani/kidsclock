@@ -79,11 +79,12 @@
       small {
         font-size: 3vh;
       }
+
       svg {
         height: 100%;
         max-height: 60vh;
       }
-    }    
+    }
 
     #footer {
       padding: 1em;
@@ -93,6 +94,10 @@
       padding: 1em;
       text-align: center;
       justify-self: center;
+    }
+
+    input[type=number] {
+      width: 2em;
     }
 
     #score {
@@ -106,6 +111,28 @@
 
     svg circle {
       pointer-events: none;
+    }
+
+    .shake {
+      animation: shake 0.2s ease-in-out 0s 2;
+    }
+
+    @keyframes shake {
+      0% {
+        margin-left: 0rem;
+      }
+
+      25% {
+        margin-left: 0.5rem;
+      }
+
+      75% {
+        margin-left: -0.5rem;
+      }
+
+      100% {
+        margin-left: 0rem;
+      }
     }
   </style>
 </head>
@@ -128,20 +155,29 @@
       <div>
         <nobr>Time?</nobr>
       </div>
-      <div><input id="input" type="text" placeholder="hh:mm" size="6" onChange="kidsClock.validateInput()"></div>
+      <form onSubmit="kidsClock.validateInput(); return false;">
+        <div>
+          <input id="inputHour" type="number" pattern="[0-9]*" min="1" max="12" placeholder="hh" autofocus>:<input
+            id="inputMin" type="number" pattern="[0-9]*" min="0" max="59" placeholder="mm">
+          <input type="submit" value="ok">
+        </div>
+      </form>
       <div id="score"></div>
     </div>
   </div>
-  <small id="footer">A game to help kids learn how to read analog clocks. 🇨🇭 Swiss made.</small>
+  <small id="footer">A game to help kids learn how to read analog clocks. 🇨🇭 Swiss made. <a
+      href="https://github.com/alokmenghrajani/kidsclock">Open Source</a>. No ads or tracking.</small>
   <script src="svgjs/svg.min.js"></script>
   <script>
     // TODO:
     // - consider making angularTime number of seconds since noon/midnight.
-    // - rewrite validate input. Use angularTime?
-    // - improve UI (default mobile keyboard to numeric, disallow typing non-numeric keys, keep focus on input box,
-    //   force user to type enter).
-    // - do something when the user gets the input wrong.
+    // - rewrite validate input, use angularTime to simplify delta calculation.
+    // - improve UI
+    //   - on mobile, make it so that the soft keyboard doesn't hide the clock.
+    //   - on desktop, make it so that either input fields are always in focus.
     // - confetti or something when you switch from one level to another
+    // - figure out why iOS Safari freezes up after the incorrect entry animation plays.
+    // - looks ugly on desktop Safari.
 
     const LEVELS = 9;
 
@@ -166,7 +202,7 @@
         this.draw.on('mousemove', e => this.eventMove(e));
         this.draw.on('touchmove', e => this.eventMove(e));
         this.draw.on('mouseup', e => this.eventUp(e));
-        this.draw.on('touchup', e => this.eventUp(e));
+        this.draw.on('touchend', e => this.eventUp(e));
       }
 
       setAngularTime(t) {
@@ -176,7 +212,9 @@
           this.angularTime += 12 * 360;
         }
         this.update(this.angularTime);
-        input.value = "";
+        inputHour.value = "";
+        inputHour.focus();
+        inputMin.value = "";
       }
 
       incrementScore() {
@@ -390,22 +428,10 @@
         const hourAngle = this.angularTime / 12;
         let hour = Math.floor(hourAngle / 30);
 
-        let delta1 = 9999;
-        let m = input.value.match(/^([0-9]{1,2})[^0-9]([0-9]{1,2})$/);
-        if (m) {
-          if ((m[1] >= 1) && (m[1] <= 12) && (m[2] >= 0) && (m[2] <= 59)) {
-            delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2] | 0)))
-          }
-        } else {
-          m = input.value.match(/^([0-9]{1,2})([0-9]{2,2})$/);
-          if (m) {
-            if ((m[1] >= 1) && (m[1] <= 12) && (m[2] >= 0) && (m[2] <= 59)) {
-              delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2] | 0)))
-            }
-          }
-        }
+        const delta1 = Math.abs((hour * 60 + min) - (inputHour.value * 60 + (inputMin.value | 0)));
         const delta2 = Math.abs(720 - delta1);
         const delta = Math.min(delta1, delta2);
+        debugger;
         if (delta == 0) {
           this.incrementScore();
           return;
@@ -417,7 +443,12 @@
           return;
         }
 
-        // TODO: animate error
+        // Error animation
+        form.className = "shake";
+        setTimeout(() => {
+          form.className = "";
+          this.setAngularTime(this.angularTime);
+        }, 400);
       }
 
       update(angularTime) {
@@ -639,7 +670,7 @@
           minHand.fill('#aaa');
         }
         minHand.on('mousedown', e => this.eventDown(e, "min"));
-        minHand.on('touchdown', e => this.eventDown(e, "min"));
+        minHand.on('touchstart', e => this.eventDown(e, "min"));
         this.elements.push(minHand);
 
         // draw hour hand
@@ -650,7 +681,7 @@
           hourHand.fill('#666');
         }
         hourHand.on('mousedown', e => this.eventDown(e, "hour"));
-        hourHand.on('touchdown', e => this.eventDown(e, "hour"));
+        hourHand.on('touchstart', e => this.eventDown(e, "hour"));
         this.elements.push(hourHand);
 
         // draw pin which holds the hands in place
