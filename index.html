@@ -111,6 +111,7 @@
     class KidsClock {
       constructor() {
         this.level = 0;
+        this.maxLevel = 0;
         this.score = Array(9).fill(0)
 
         // We track time in "angularTime", which is essentially the number of degrees the
@@ -144,25 +145,31 @@
           this.score[this.level] = 5;
         }
         if (this.score[this.level] == 5) {
-          // TODO: show confetti
-          if (this.level < 9) {
-            this.level++;
+          this.level++;
+          if (this.level > 8) {
+            this.level = 8;
           }
+        }
+        if (this.level > this.maxLevel) {
+          // TODO: show confetti
+          this.maxLevel = this.level;
         }
 
         localStorage.setItem('score', JSON.stringify(this.score));
         localStorage.setItem('level', this.level);
+        localStorage.setItem('maxLevel', this.maxLevel);
         this.reload();
       }
 
       changeLevel() {
         this.level = levelPicker.value | 0;
+        localStorage.setItem('level', this.level);
         this.reload();
       }
 
       reload() {
         levelPicker.value = this.level;
-        for (let i = 0; i <= this.level; i++) {
+        for (let i = 0; i <= this.maxLevel; i++) {
           document.getElementById("level--" + i).disabled = false;
         }
 
@@ -317,7 +324,7 @@
           case 8:
             {
               // only 12 for hours and different style for minute dots
-              this.hoursText = "arabic-3";
+              this.hoursText = "arabic-2";
               this.minutesDotStyle = "style-4";
 
               // everything else is the same as previous level
@@ -789,6 +796,12 @@
     if (l) {
       kidsClock.level = l|0;
     }
+
+    const m = localStorage.getItem("maxLevel");
+    if (m) {
+      kidsClock.maxLevel = m|0;
+    }
+
     const s = localStorage.getItem("score");
     if (s) {
       kidsClock.score = JSON.parse(s);
