@@ -100,8 +100,8 @@
   <script>
     class KidsClock {
       constructor() {
-        this.level = 0;
-        this.score = 0;
+        this.level = 1;
+        this.score = Array(10).fill(0)
 
         // We track time in "angularTime", which is essentially the number of degrees the
         // hour hand has moved since 12:00. There's 4320 angularTime degrees per half-day.
@@ -128,21 +128,22 @@
       }
 
       incrementScore() {
-        this.score++;
+        this.score[this.level]++;
 
-        if (this.score == 5) {
+        if (this.score[this.level] == 5) {
           // TODO: show confetti
           if (this.level < 9) {
-            this.score = 0;
             this.level++;
           }
         }
+
+        localStorage.setItem('score', JSON.stringify(this.score));
+        localStorage.setItem('level', this.level);
         this.reload();
       }
 
       changeLevel() {
         this.level = levelPicker.value | 0;
-        this.score = 0;
         this.reload();
       }
 
@@ -153,7 +154,7 @@
         }
 
         const icons = ["⭐", "😛", "🍄", "🐚", "🌻", "🦋", "🧸", "🏆", "🐐"];
-        score.innerText = new Array(this.score + 1).join(icons[this.level-1]);
+        score.innerText = Array(this.score[this.level]).fill(icons[this.level-1]).join('');
 
         switch (this.level) {
           case 1:
@@ -772,9 +773,15 @@
 
     kidsClock = new KidsClock();
 
-    // TODO: read level from local storage
-    kidsClock.level = 1;
-    kidsClock.score = 0;
+    // Read level+score from local storage
+    const l = localStorage.getItem("level");
+    if (l) {
+      kidsClock.level = l|0;
+    }
+    const s = localStorage.getItem("score");
+    if (s) {
+      kidsClock.score = JSON.parse(s);
+    }
     kidsClock.reload();
   </script>
 </body>
