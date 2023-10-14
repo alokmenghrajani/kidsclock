@@ -98,21 +98,23 @@
   <small id="footer">A game to help kids learn how to read analog clocks. 🇨🇭 Swiss made.</small>
   <script src="svgjs/svg.min.js"></script>
   <script>
-// TODO:
-// - click/touch on hands
-// - consider making angularTime number of seconds since noon/midnight.
-// - rewrite validate input. Use angularTime?
-// - do something when the user gets the input wrong.
-// - force user to type enter.
-// - figure out mobile UI
-// - confetti or something when you switch from one level to another
-// - force user input to be 1-12 for hours and 0-59 for minutes.
+    // TODO:
+    // - click/touch on hands
+    // - consider making angularTime number of seconds since noon/midnight.
+    // - rewrite validate input. Use angularTime?
+    // - do something when the user gets the input wrong.
+    // - force user to type enter.
+    // - figure out mobile UI
+    // - confetti or something when you switch from one level to another
+    // - force user input to be 1-12 for hours and 0-59 for minutes.
+
+    const LEVELS = 9;
 
     class KidsClock {
       constructor() {
         this.level = 0;
         this.maxLevel = 0;
-        this.score = Array(9).fill(0)
+        this.score = Array(LEVELS).fill(0)
 
         // We track time in "angularTime", which is essentially the number of degrees the
         // hour hand has moved since 12:00. There's 4320 angularTime degrees per half-day.
@@ -146,8 +148,8 @@
         }
         if (this.score[this.level] == 5) {
           this.level++;
-          if (this.level > 8) {
-            this.level = 8;
+          if (this.level > (LEVELS - 1)) {
+            this.level = LEVELS - 1;
           }
         }
         if (this.level > this.maxLevel) {
@@ -353,11 +355,11 @@
         let delta1 = 9999;
         let m = input.value.match(/^([0-9]{1,2})[^0-9]([0-9]{1,2})$/);
         if (m) {
-          delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2]|0)))
+          delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2] | 0)))
         } else {
           m = input.value.match(/^([0-9]{1,2})([0-9]{2,2})$/);
           if (m) {
-            delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2]|0)))
+            delta1 = Math.abs((hour * 60 + min) - (m[1] * 60 + (m[2] | 0)))
           }
         }
         const delta2 = Math.abs(720 - delta1);
@@ -367,7 +369,8 @@
           return;
         }
 
-        if ((this.level == 9) && (delta <= 5)) {
+        // On the last level, we allow a bit of wiggle since the clock face is bland.
+        if ((this.minutesDotStyle == "style-4") && (delta <= 5)) {
           this.incrementScore();
           return;
         }
@@ -794,12 +797,12 @@
     // Read level+score from local storage
     const l = localStorage.getItem("level");
     if (l) {
-      kidsClock.level = l|0;
+      kidsClock.level = l | 0;
     }
 
     const m = localStorage.getItem("maxLevel");
     if (m) {
-      kidsClock.maxLevel = m|0;
+      kidsClock.maxLevel = m | 0;
     }
 
     const s = localStorage.getItem("score");
