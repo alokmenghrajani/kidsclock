@@ -26,8 +26,51 @@
     #main {
       flex-grow: 1;
       display: flex;
-      flex-direction: row;
       justify-content: center;
+    }
+
+    @media (max-aspect-ratio: 1/1) {
+      #main {
+        flex-direction: column;
+      }
+
+      #form {
+        font-size: 5vw;
+      }
+
+      input {
+        font-size: 5vw;
+      }
+
+      select {
+        font-size: 3vw;
+      }
+
+      small {
+        font-size: 3vw;
+      }
+    }
+
+    @media not (max-aspect-ratio: 1/1) {
+      #main {
+        flex-direction: row;
+      }
+
+      #form {
+        font-size: 5vh;
+      }
+
+      input {
+        font-size: 5vh;
+      }
+
+      select {
+        font-size: 3vh;
+      }
+
+      small {
+        font-size: 3vh;
+      }
     }
 
     #footer {
@@ -41,17 +84,8 @@
 
     #form {
       padding: 1em;
-      justify-self: center;
+      text-align: center;
       align-self: center;
-      font-size: 5vh;
-    }
-
-    input {
-      font-size: 5vh;
-    }
-
-    select {
-      font-size: 3vh;
     }
 
     #score {
@@ -65,10 +99,6 @@
 
     svg circle {
       pointer-events: none;
-    }
-
-    small {
-      font-size: 3vh;
     }
   </style>
 </head>
@@ -102,9 +132,9 @@
     // - click/touch on hands
     // - consider making angularTime number of seconds since noon/midnight.
     // - rewrite validate input. Use angularTime?
+    // - improve UI (default mobile keyboard to numeric, disallow typing non-numeric keys, keep focus on input box,
+    //   force user to type enter).
     // - do something when the user gets the input wrong.
-    // - force user to type enter.
-    // - figure out mobile UI
     // - confetti or something when you switch from one level to another
 
     const LEVELS = 9;
